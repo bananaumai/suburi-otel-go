@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"go.opentelemetry.io/otel"
 	"io"
 	"os"
@@ -39,6 +40,10 @@ func newResource() *resource.Resource {
 }
 
 func main() {
+	var samplingFraction float64
+	flag.Float64Var(&samplingFraction, "sampling-fraction", 1, "sampling fraction")
+	flag.Parse()
+
 	exp, err := newExporter(os.Stderr)
 	if err != nil {
 		panic(err)
@@ -47,6 +52,7 @@ func main() {
 	tp := trace.NewTracerProvider(
 		trace.WithBatcher(exp),
 		trace.WithResource(newResource()),
+		trace.WithSampler(trace.ParentBased(trace.TraceIDRatioBased(samplingFraction))),
 	)
 	defer func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
